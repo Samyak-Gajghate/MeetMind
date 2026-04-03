@@ -1,5 +1,4 @@
 import asyncio
-import ssl
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -9,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 from app.config import settings
+from app.core.db_diagnostics import log_database_target
 from app.database import Base
 from app.models import *
 
@@ -18,9 +18,14 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+migration_database_url = settings.MIGRATION_DATABASE_URL or settings.DATABASE_URL
+
+if settings.DB_DIAGNOSTICS_ENABLED:
+    source = "MIGRATION_DATABASE_URL" if settings.MIGRATION_DATABASE_URL else "DATABASE_URL"
+    log_database_target(migration_database_url, label=f"MIGRATIONS ({source})")
 
 def run_migrations_offline() -> None:
-    url = settings.DATABASE_URL
+    url = migration_database_url
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -39,17 +44,16 @@ def do_run_migrations(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = settings.DATABASE_URL
-
-    _ssl_ctx = ssl.create_default_context()
-    _ssl_ctx.check_hostname = False
-    _ssl_ctx.verify_mode = ssl.CERT_NONE
+    configuration["sqlalchemy.url"] = migration_database_url
 
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        connect_args={"statement_cache_size": 0, "ssl": _ssl_ctx}
+        connect_args={
+            "statement_cache_size": 0,
+            "timeout": settings.DB_CONNECT_TIMEOUT_SEC,
+        },
     )
 
     async with connectable.connect() as connection:

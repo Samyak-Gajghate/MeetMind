@@ -4,6 +4,9 @@ from typing import List
 
 class Settings(BaseSettings):
     DATABASE_URL: str
+    MIGRATION_DATABASE_URL: str | None = None
+    DB_CONNECT_TIMEOUT_SEC: int = 15
+    DB_DIAGNOSTICS_ENABLED: bool = True
     GEMINI_API_KEY: str
     SUPABASE_URL: str
     SUPABASE_KEY: str

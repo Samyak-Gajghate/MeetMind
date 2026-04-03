@@ -1,13 +1,24 @@
-import ssl
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import declarative_base
 from app.config import settings
+from app.core.db_diagnostics import log_database_target
 
-_ssl_ctx = ssl.create_default_context()
-_ssl_ctx.check_hostname = False
-_ssl_ctx.verify_mode = ssl.CERT_NONE
+if settings.DB_DIAGNOSTICS_ENABLED:
+    log_database_target(settings.DATABASE_URL, label="API")
 
-engine = create_async_engine(settings.DATABASE_URL, echo=False, connect_args={"statement_cache_size": 0, "ssl": _ssl_ctx})
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=False,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+    pool_size=5,
+    max_overflow=5,
+    connect_args={
+        # Required for pgbouncer transaction/session pool compatibility.
+        "statement_cache_size": 0,
+        "timeout": settings.DB_CONNECT_TIMEOUT_SEC,
+    },
+)
 AsyncSessionLocal = async_sessionmaker(
     bind=engine, autoflush=False, autocommit=False, class_=AsyncSession
 )
