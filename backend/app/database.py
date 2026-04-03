@@ -7,13 +7,14 @@ from app.core.db_diagnostics import log_database_target
 if settings.DB_DIAGNOSTICS_ENABLED:
     log_database_target(settings.DATABASE_URL, label="API")
 
-# Parse URL and remove sslmode from query params (asyncpg uses ssl= not sslmode=)
-parsed_url = make_url(settings.DATABASE_URL)
-if "sslmode" in parsed_url.query:
-    parsed_url = parsed_url.update_query_dict({k: v for k, v in parsed_url.query.items() if k != "sslmode"})
-    database_url_for_engine = str(parsed_url)
-else:
-    database_url_for_engine = settings.DATABASE_URL
+def _sanitize_database_url(raw_url: str) -> str:
+    parsed_url = make_url(raw_url)
+    clean_query = dict(parsed_url.query)
+    clean_query.pop("sslmode", None)
+    return str(parsed_url.set(query=clean_query))
+
+
+database_url_for_engine = _sanitize_database_url(settings.DATABASE_URL)
 
 engine = create_async_engine(
     database_url_for_engine,
