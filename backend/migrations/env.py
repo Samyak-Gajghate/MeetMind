@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 from app.config import settings
-from app.core.db_diagnostics import log_database_target
+from app.core.db_diagnostics import log_database_target, preflight_database_network
 from app.database import Base
 from app.models import *
 
@@ -43,8 +43,24 @@ def do_run_migrations(connection: Connection) -> None:
         context.run_migrations()
 
 async def run_async_migrations() -> None:
+    if settings.DB_DIAGNOSTICS_ENABLED:
+        preflight_database_network(
+            migration_database_url,
+            label="MIGRATIONS",
+            timeout_sec=settings.DB_CONNECT_TIMEOUT_SEC,
+        )
+
+    # Parse URL and remove sslmode from query params (asyncpg uses ssl= not sslmode=)
+    from sqlalchemy.engine.url import make_url
+    parsed_url = make_url(migration_database_url)
+    if "sslmode" in parsed_url.query:
+        parsed_url = parsed_url.update_query_dict({k: v for k, v in parsed_url.query.items() if k != "sslmode"})
+        migration_url_for_engine = str(parsed_url)
+    else:
+        migration_url_for_engine = migration_database_url
+
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = migration_database_url
+    configuration["sqlalchemy.url"] = migration_url_for_engine
 
     connectable = async_engine_from_config(
         configuration,
@@ -53,6 +69,7 @@ async def run_async_migrations() -> None:
         connect_args={
             "statement_cache_size": 0,
             "timeout": settings.DB_CONNECT_TIMEOUT_SEC,
+            "ssl": True,
         },
     )
 
