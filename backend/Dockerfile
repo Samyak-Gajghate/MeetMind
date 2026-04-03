@@ -25,5 +25,6 @@ USER appuser
 
 EXPOSE 8000
 
-# Run migrations then start server
-CMD ["sh", "-c", "ok=0; for i in 1 2 3 4 5; do alembic upgrade head && ok=1 && break; echo \"DB not reachable (attempt ${i}/5), retrying in 4s...\"; sleep 4; done; [ \"$ok\" = \"1\" ] || exit 1; exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000} --workers 1"]
+# Start server immediately so Render can detect the bound port.
+# Run migrations separately from an environment that can reach the database.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000} --workers 1"]
