@@ -31,7 +31,7 @@ def upgrade() -> None:
             '00000000-0000-0000-0000-000000000002',
             '00000000-0000-0000-0000-000000000001',
             'admin@meetmind.local',
-            '$2b$12$4O6jD8R7jX0I4iO1q14MTe2z1S2n2S6S6n6n2z2z1S2n2S2z1', 
+            '$2b$12$wloXQO198ZmS5PecvGMKYeJBkgLBCI2j15osV4HUa8fb28eNMWXgG', 
             'System Admin',
             'admin'
         )
