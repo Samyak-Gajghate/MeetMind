@@ -14,7 +14,13 @@ def _sanitize_database_url(raw_url: str) -> str:
     return parsed_url.set(query=clean_query).render_as_string(hide_password=False)
 
 
+import ssl
+
 database_url_for_engine = _sanitize_database_url(settings.DATABASE_URL)
+
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
 
 engine = create_async_engine(
     database_url_for_engine,
@@ -27,7 +33,7 @@ engine = create_async_engine(
         # Required for pgbouncer transaction/session pool compatibility.
         "statement_cache_size": 0,
         "timeout": settings.DB_CONNECT_TIMEOUT_SEC,
-        "ssl": True,
+        "ssl": ssl_context,
     },
 )
 AsyncSessionLocal = async_sessionmaker(
