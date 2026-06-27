@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import api from '@/lib/api';
+import api, { getErrorMessage } from '@/lib/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,7 +20,7 @@ export default function LoginPage() {
       localStorage.setItem('access_token', res.data.access_token);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Identification failed. Please try again.');
+      setError(getErrorMessage(err, 'Identification failed. Please try again.'));
     } finally {
       setLoading(false);
     }

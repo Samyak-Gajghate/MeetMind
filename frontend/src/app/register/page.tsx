@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import api from '@/lib/api';
+import api, { getErrorMessage } from '@/lib/api';
 import Link from 'next/link';
 
 export default function RegisterPage() {
@@ -27,7 +27,7 @@ export default function RegisterPage() {
       });
       router.push('/login');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+      setError(getErrorMessage(err, 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }

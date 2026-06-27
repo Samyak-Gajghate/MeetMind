@@ -46,4 +46,28 @@ api.interceptors.response.use(
   }
 );
 
+export function getErrorMessage(err: any, fallbackMessage: string = 'An unexpected error occurred.'): string {
+  const detail = err.response?.data?.detail;
+  if (!detail) {
+    return err.message || fallbackMessage;
+  }
+  if (typeof detail === 'string') {
+    return detail;
+  }
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item: any) => {
+        const field = item.loc ? item.loc[item.loc.length - 1] : '';
+        const msg = item.msg || '';
+        return field ? `${field}: ${msg}` : msg;
+      })
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (typeof detail === 'object') {
+    return JSON.stringify(detail);
+  }
+  return String(detail);
+}
+
 export default api;
