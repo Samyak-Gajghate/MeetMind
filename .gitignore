@@ -10,3 +10,5 @@ dist/
 build/
 coverage/
 project-docs/
+graphify-out/
+.agent/
