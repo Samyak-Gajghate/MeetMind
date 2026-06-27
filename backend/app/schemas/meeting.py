@@ -21,6 +21,9 @@ class MeetingRead(BaseModel):
     participant_names: List[str]
     status: str
     created_at: datetime
+    action_item_count: Optional[int] = 0
+    decision_count: Optional[int] = 0
+    error_message: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class MeetingUploadResponse(BaseModel):
@@ -31,6 +34,8 @@ class MeetingUploadResponse(BaseModel):
 
 class ActionItemRead(BaseModel):
     id: UUID
+    meeting_id: UUID
+    meeting_title: Optional[str] = None
     description: str
     owner_name: Optional[str]
     due_date: Optional[date]

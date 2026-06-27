@@ -17,16 +17,16 @@ async def global_search(
     workspace_id = str(current_user.workspace_id)
     
     sql_query = """
-    SELECT 'meeting' as type, id::text, title as snippet, created_at 
+    SELECT 'meeting' as type, id::text as id, id::text as meeting_id, title as snippet, title as meeting_title, created_at 
     FROM meetings 
     WHERE workspace_id = :ws_id AND deleted_at IS NULL AND title ILIKE :q
     UNION ALL
-    SELECT 'action_item' as type, a.id::text, a.description as snippet, a.created_at
+    SELECT 'action_item' as type, a.id::text as id, a.meeting_id::text as meeting_id, a.description as snippet, m.title as meeting_title, a.created_at
     FROM action_items a
     JOIN meetings m ON a.meeting_id = m.id
     WHERE m.workspace_id = :ws_id AND a.deleted_at IS NULL AND a.description ILIKE :q
     UNION ALL
-    SELECT 'decision' as type, d.id::text, d.description as snippet, d.created_at
+    SELECT 'decision' as type, d.id::text as id, d.meeting_id::text as meeting_id, d.description as snippet, m.title as meeting_title, d.created_at
     FROM decisions d
     JOIN meetings m ON d.meeting_id = m.id
     WHERE m.workspace_id = :ws_id AND d.description ILIKE :q
@@ -42,7 +42,9 @@ async def global_search(
         formatted_results.append({
             "type": row.type,
             "id": row.id,
+            "meeting_id": row.meeting_id,
             "snippet": row.snippet,
+            "meeting_title": row.meeting_title,
             "created_at": row.created_at
         })
         

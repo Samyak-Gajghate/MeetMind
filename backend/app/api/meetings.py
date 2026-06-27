@@ -155,6 +155,8 @@ async def list_meetings(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
+    from sqlalchemy import func
+    
     result = await db.execute(
         select(Meeting)
         .where(Meeting.workspace_id == current_user.workspace_id, Meeting.deleted_at.is_(None))
@@ -162,7 +164,41 @@ async def list_meetings(
         .offset(skip)
         .limit(limit)
     )
-    return result.scalars().all()
+    meetings = result.scalars().all()
+    
+    meetings_read = []
+    for mtg in meetings:
+        # Get count of action items
+        ai_result = await db.execute(
+            select(func.count(ActionItem.id))
+            .where(ActionItem.meeting_id == mtg.id)
+        )
+        ai_count = ai_result.scalar() or 0
+        
+        # Get count of decisions
+        dec_result = await db.execute(
+            select(func.count(Decision.id))
+            .where(Decision.meeting_id == mtg.id)
+        )
+        dec_count = dec_result.scalar() or 0
+
+        # Get error message from ProcessingJob if failed
+        error_msg = None
+        if mtg.status == "failed":
+            job_result = await db.execute(
+                select(ProcessingJob.error_message)
+                .where(ProcessingJob.meeting_id == mtg.id)
+                .order_by(ProcessingJob.created_at.desc())
+            )
+            error_msg = job_result.scalar() or "Processing failed"
+            
+        m_read = MeetingRead.model_validate(mtg)
+        m_read.action_item_count = ai_count
+        m_read.decision_count = dec_count
+        m_read.error_message = error_msg
+        meetings_read.append(m_read)
+        
+    return meetings_read
 
 
 @router.get("/{meeting_id}", response_model=MeetingDetailRead)

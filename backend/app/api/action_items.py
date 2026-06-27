@@ -22,7 +22,7 @@ async def list_action_items(
     current_user: User = Depends(deps.get_current_user)
 ):
     query = (
-        select(ActionItem)
+        select(ActionItem, Meeting.title.label("meeting_title"))
         .join(Meeting, ActionItem.meeting_id == Meeting.id)
         .where(Meeting.workspace_id == current_user.workspace_id, ActionItem.deleted_at.is_(None))
     )
@@ -34,7 +34,15 @@ async def list_action_items(
         
     query = query.order_by(ActionItem.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
-    return result.scalars().all()
+    rows = result.all()
+    
+    action_items_read = []
+    for ai, meeting_title in rows:
+        ai_read = ActionItemRead.model_validate(ai)
+        ai_read.meeting_title = meeting_title
+        action_items_read.append(ai_read)
+        
+    return action_items_read
 
 @router.patch("/{item_id}", response_model=ActionItemRead)
 async def update_action_item(
