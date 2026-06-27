@@ -11,7 +11,7 @@ def _sanitize_database_url(raw_url: str) -> str:
     parsed_url = make_url(raw_url)
     clean_query = dict(parsed_url.query)
     clean_query.pop("sslmode", None)
-    return str(parsed_url.set(query=clean_query))
+    return parsed_url.set(query=clean_query).render_as_string(hide_password=False)
 
 
 database_url_for_engine = _sanitize_database_url(settings.DATABASE_URL)

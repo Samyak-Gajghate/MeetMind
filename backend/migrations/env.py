@@ -43,12 +43,12 @@ def do_run_migrations(connection: Connection) -> None:
     with context.begin_transaction():
         context.run_migrations()
 
-
 def _sanitize_database_url(raw_url: str) -> str:
     parsed_url = make_url(raw_url)
     clean_query = dict(parsed_url.query)
     clean_query.pop("sslmode", None)
-    return str(parsed_url.set(query=clean_query))
+    return parsed_url.set(query=clean_query).render_as_string(hide_password=False)
+
 
 async def run_async_migrations() -> None:
     if settings.DB_DIAGNOSTICS_ENABLED:
@@ -60,13 +60,18 @@ async def run_async_migrations() -> None:
 
     migration_url_for_engine = _sanitize_database_url(migration_database_url)
 
+    import ssl
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
     connectable = create_async_engine(
         migration_url_for_engine,
         poolclass=pool.NullPool,
         connect_args={
             "statement_cache_size": 0,
             "timeout": settings.DB_CONNECT_TIMEOUT_SEC,
-            "ssl": True,
+            "ssl": ssl_context,
         },
     )
 
